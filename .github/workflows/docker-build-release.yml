@@ -2,10 +2,7 @@ name: "docker build release"
 
 on:
   push:
-    # 可以指定特定分支触发构建
-
   workflow_dispatch:
-    # 允许手动触发工作流
 
 env:
   PROJECT: frpc
@@ -16,49 +13,38 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2.3.5
-        # 确保检出最新代码用于后续步骤
 
       - name: Set tag
         id: tag
         run: |
-          # 使用精确匹配提取 VERSION 环境变量的值
-          if [[ -n "$(cat Dockerfile | awk '$1 == "ENV" && $2 == "VERSION" { print $3 }')" ]]; then
-            VERSION="$(cat Dockerfile | awk '$1 == "ENV" && $2 == "VERSION" { print $3 }')"
-            echo "tag=$VERSION" >> "$GITHUB_ENV"
+          if [[ -n $(cat Dockerfile | awk '{if($1=="ENV" && $2=="VERSION")print $3}') ]]; then
+            VERSION=$(cat Dockerfile | awk '{if($1=="ENV" && $2=="VERSION")print $3}')
+            echo "tag=$VERSION" >> $GITHUB_ENV
           else
-            # 如果未找到 VERSION，则使用日期作为默认标签
-            echo "tag=$(date +%Y)-$(date +%m)-$(date +%d)" >> "$GITHUB_ENV"
+            echo "tag=$(date +%Y)-$(date +%m)-$(date +%d)" >> $GITHUB_ENV
           fi
-          # 输出调试信息以便排查问题
-          echo "Using tag: ${TAG}"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
-        # 安装必要的模拟器以支持多架构构建
-        with:
-          platforms: all # 根据需求调整支持的平台
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
-        # 启用跨平台构建功能
 
-      - name: Login to Docker Hub
+      - name: Login Docker Hub
         uses: docker/login-action@v1 
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-        # 登录 Docker Hub 以便推送镜像
 
-      - name: Build and push to Docker Hub
+      - name: Build and push to docker hub
         uses: docker/build-push-action@v2
         with:
           context: .
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: true
-          tags:
-            - "${{ secrets.DOCKER_USERNAME }}/${{ env.PROJECT }}:latest"
-            - "${{ secrets.DOCKER_USERNAME }}/${{ env.PROJECT }}:${{ env.tag }}"
-        # 构建并推送多架构镜像到 Docker Hub
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/${{ env.PROJECT }}:latest
+            ${{ secrets.DOCKER_USERNAME }}/${{ env.PROJECT }}:${{ env.tag }}
 
       - name: Sync README.md to Docker Hub
         uses: ms-jpq/sync-dockerhub-readme@v1
@@ -67,29 +53,20 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
           repository: ${{ secrets.DOCKER_USERNAME }}/${{ env.PROJECT }}
           readme: "./README.md"
-        # 确保 README.md 使用 UTF-8 编码保存，避免中文乱码
 
-      - name: Logout from Docker Hub
-        run: docker logout # 登出以确保安全
-
-      - name: Login to Harbor
+      - name: Login harbor
         uses: docker/login-action@v1 
         with:
           registry: ${{ secrets.HARBOR_REGISTRY }}
           username: ${{ secrets.HARBOR_USERNAME }}
           password: ${{ secrets.HARBOR_PASSWORD }}
-        # 登录私有 Harbor 仓库
 
-      - name: Build and push to Harbor
+      - name: Build and push to harbor
         uses: docker/build-push-action@v2
         with:
           context: .
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: true
-          tags:
-            - "${{ secrets.HARBOR_REGISTRY }}/${{ secrets.HARBOR_USERNAME }}/${{ env.PROJECT }}:latest"
-            - "${{ secrets.HARBOR_REGISTRY }}/${{ secrets.HARBOR_USERNAME }}/${{ env.PROJECT }}:${{ env.tag }}"
-        # 构建并推送多架构镜像到 Harbor
-
-      - name: Logout from Harbor
-        run: docker logout # 登出以确保安全
+          tags: |
+            ${{ secrets.HARBOR_REGISTRY }}/${{ secrets.HARBOR_USERNAME }}/${{ env.PROJECT }}:latest
+            ${{ secrets.HARBOR_REGISTRY }}/${{ secrets.HARBOR_USERNAME }}/${{ env.PROJECT }}:${{ env.tag }}
