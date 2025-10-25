@@ -3,7 +3,7 @@ name: "docker build release"
 on:
   push:
     # 可以指定特定分支触发构建
-    branches: [ main ] # 根据需要修改或删除此行以响应所有推送
+
   workflow_dispatch:
     # 允许手动触发工作流
 
