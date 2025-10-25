@@ -20,8 +20,7 @@ jobs:
           if [[ -n $(cat Dockerfile | awk '{if($1~"ENV" && $2=="VERSION")print $3}') ]]; then
             VERSION=$(cat Dockerfile | awk '{if($1~"ENV" && $2=="VERSION")print $3}')
             echo "tag=$VERSION" >> $GITHUB_ENV
-          else
-            echo "tag=$(date +%Y)-$(date +%m)-$(date +%d)" >> $GITHUB_ENV
+        
           fi
 
       - name: Set up QEMU
