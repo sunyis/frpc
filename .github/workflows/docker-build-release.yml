@@ -17,14 +17,9 @@ jobs:
       - name: Set tag
         id: tag
         run: |
-    # 使用单引号包裹命令替换，避免变量提前展开和解析错误
-    local version_value=$(cat Dockerfile | awk '/^ENV\s+VERSION=/ {print $3}')
-    
-    if [[ -n "$version_value" ]]; then
-      echo "tag=$version_value" >> "$GITHUB_ENV"
-    else
-      # 使用日期作为默认标签格式：YYYY-MM-DD
-      echo "tag=$(date +%Y)-$(date +%m)-$(date +%d)" >> "$GITHUB_ENV"
+          if [[ -n $(cat Dockerfile | awk '{if($1=="ENV" && $2=="VERSION")print $3}') ]]; then
+            VERSION=$(cat Dockerfile | awk '{if($1=="ENV" && $2=="VERSION")print $3}')
+            echo "tag=$VERSION" >> $GITHUB_ENV
     fi
 
       - name: Set up QEMU
