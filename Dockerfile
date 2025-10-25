@@ -1,7 +1,7 @@
 FROM alpine:3.8
 LABEL maintainer="Stille <stille@ioiox.com>"
 
-ENV VERSION 0.65.0
+ENV VERSION 0.28.2
 ENV TZ=Asia/Shanghai
 WORKDIR /
 
@@ -18,10 +18,10 @@ RUN if [ "$(uname -m)" = "x86_64" ]; then export PLATFORM=amd64 ; \
 	&& tar xzf frp_${VERSION}_linux_${PLATFORM}.tar.gz \
 	&& cd frp_${VERSION}_linux_${PLATFORM} \
 	&& mkdir /frp \
-	&& mv frpc frpc.toml /frp \
+	&& mv frpc frpc.ini /frp \
 	&& cd .. \
 	&& rm -rf *.tar.gz frp_${VERSION}_linux_${PLATFORM}
 
 VOLUME /frp
 
-CMD /frp/frpc -c /frp/frpc.toml
+CMD /frp/frpc -c /frp/frpc.ini
