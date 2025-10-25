@@ -17,10 +17,12 @@ jobs:
       - name: Set tag
         id: tag
         run: |
-          if [[ -n $(cat Dockerfile | awk '{if($1=="ENV" && $2=="VERSION")print $3}') ]]; then
-            VERSION=$(cat Dockerfile | awk '{if($1=="ENV" && $2=="VERSION")print $3}')
+          if [[ -n $(cat Dockerfile | awk '{if($1~"ENV" && $2=="VERSION")print $3}') ]]; then
+            VERSION=$(cat Dockerfile | awk '{if($1~"ENV" && $2=="VERSION")print $3}')
             echo "tag=$VERSION" >> $GITHUB_ENV
-  
+          else
+            echo "tag=$(date +%Y)-$(date +%m)-$(date +%d)" >> $GITHUB_ENV
+          fi
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
@@ -41,7 +43,6 @@ jobs:
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: true
           tags: |
-            ${{ secrets.DOCKER_USERNAME }}/${{ env.PROJECT }}:latest
             ${{ secrets.DOCKER_USERNAME }}/${{ env.PROJECT }}:${{ env.tag }}
 
       - name: Sync README.md to Docker Hub
