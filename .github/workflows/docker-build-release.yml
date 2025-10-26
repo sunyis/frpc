@@ -19,8 +19,8 @@ jobs:
         run: |
           if [[ -n $(cat Dockerfile | awk '{if($1~"ENV" && $2=="VERSION")print $3}') ]]; then
             VERSION=$(cat Dockerfile | awk '{if($1~"ENV" && $2=="VERSION")print $3}')
-            echo "tag=$VERSION" >> $GITHUB_ENV
-        
+            echo "tag=$VERSION" >> $GITHUB_OUTPUT
+            echo "TAG=$VERSION" >> $GITHUB_ENV
           fi
 
       - name: Set up QEMU
@@ -42,7 +42,8 @@ jobs:
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: true
           tags: |
-            ${{ secrets.DOCKER_USERNAME }}/${{ env.PROJECT }}:0.28.2
+            ${{ secrets.DOCKER_USERNAME }}/${{ env.PROJECT }}:latest
+            ${{ secrets.DOCKER_USERNAME }}/${{ env.PROJECT }}:${{ env.TAG }}
 
       - name: Sync README.md to Docker Hub
         uses: ms-jpq/sync-dockerhub-readme@v1
@@ -51,20 +52,3 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
           repository: ${{ secrets.DOCKER_USERNAME }}/${{ env.PROJECT }}
           readme: "./README.md"
-
-      - name: Login harbor
-        uses: docker/login-action@v1 
-        with:
-          registry: ${{ secrets.HARBOR_REGISTRY }}
-          username: ${{ secrets.HARBOR_USERNAME }}
-          password: ${{ secrets.HARBOR_PASSWORD }}
-
-      - name: Build and push to harbor
-        uses: docker/build-push-action@v2
-        with:
-          context: .
-          platforms: linux/amd64,linux/arm64,linux/arm/v7
-          push: true
-          tags: |
-            ${{ secrets.HARBOR_REGISTRY }}/${{ secrets.HARBOR_USERNAME }}/${{ env.PROJECT }}:latest
-            ${{ secrets.HARBOR_REGISTRY }}/${{ secrets.HARBOR_USERNAME }}/${{ env.PROJECT }}:${{ env.tag }}
