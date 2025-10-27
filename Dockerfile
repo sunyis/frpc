@@ -30,9 +30,9 @@ RUN case "${TARGETARCH}" in \
     && cd frp_${VERSION}_linux_${PLATFORM} \
     && mkdir -p /frp \
     && mv frpc /frp/ \
-    # 创建配置目录并将 frpc.ini 放入其中
-    && mkdir -p /frp/config \
-    && mv frpc.ini /frp/config/frpc.ini \
+    # 创建默认配置目录
+    && mkdir -p /frp/default-config \
+    && mv frpc.ini /frp/default-config/frpc.ini \
     && cd / \
     && rm -rf frp_${VERSION}_linux_${PLATFORM} frp.tar.gz \
     && apk del wget
@@ -40,8 +40,30 @@ RUN case "${TARGETARCH}" in \
 # 设置可执行权限
 RUN chmod +x /frp/frpc
 
+# 创建默认 hosts 条目文件
+RUN echo "8.8.8.8 dns.google" > /frp/default-config/custom-hosts
+
 # 暴露配置目录用于映射
 VOLUME /frp/config
 
-# 使用配置目录中的 frpc.ini
-CMD ["/frp/frpc", "-c", "/frp/config/frpc.ini"]
+# 创建智能启动脚本
+RUN echo '#!/bin/sh\n\
+# 初始化配置目录\n\
+if [ ! -f "/frp/config/frpc.ini" ]; then\n\
+    echo "📁 Copying default frpc.ini to /frp/config/"\n\
+    cp /frp/default-config/frpc.ini /frp/config/frpc.ini\n\
+    echo "✅ Default configuration created. Please edit /frp/config/frpc.ini for your needs."\n\
+else\n\
+    echo "✅ Using existing frpc.ini from /frp/config/"\n\
+fi\n\
+\n\
+# 添加自定义 hosts 条目（需要特权模式）\n\
+if [ -f "/frp/default-config/custom-hosts" ]; then\n\
+    echo "🌐 Adding custom hosts entries..."\n\
+    cat /frp/default-config/custom-hosts >> /etc/hosts\n\
+fi\n\
+\n\
+echo "🚀 Starting frpc with config: /frp/config/frpc.ini"\n\
+exec /frp/frpc -c /frp/config/frpc.ini' > /start.sh && chmod +x /start.sh
+
+CMD ["/start.sh"]
