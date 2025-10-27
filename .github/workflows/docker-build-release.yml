@@ -3,10 +3,14 @@ name: "Docker Build and Push"
 on:
   push:
   workflow_dispatch:
+    inputs:
+      custom_version:
+        description: 'Custom version tag'
+        required: false
+        default: '28.2'
 
 env:
   PROJECT: frpc
-  CUSTOM_VERSION: "28.2"  # 添加自定义版本
 
 jobs:
   build:
@@ -15,6 +19,18 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+
+      - name: Set Custom Version
+        id: version
+        run: |
+          # 使用手动输入的版本或默认值
+          if [ -n "${{ github.event.inputs.custom_version }}" ]; then
+            CUSTOM_VERSION="${{ github.event.inputs.custom_version }}"
+          else
+            CUSTOM_VERSION="28.2"
+          fi
+          echo "CUSTOM_VERSION=$CUSTOM_VERSION" >> $GITHUB_ENV
+          echo "Using version: $CUSTOM_VERSION"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
