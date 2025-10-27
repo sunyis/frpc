@@ -17,10 +17,12 @@ jobs:
       - name: Set tag
         id: tag
         run: |
-          if [[ -n $(cat Dockerfile | awk '{if($1~"ENV" && $2=="VERSION")print $3}') ]]; then
-            VERSION=$(cat Dockerfile | awk '{if($1~"ENV" && $2=="VERSION")print $3}')
+          VERSION=$(cat Dockerfile | awk '{if($1~"ENV" && $2=="VERSION")print $3}' || echo "")
+          if [[ -n "$VERSION" ]]; then
             echo "tag=$VERSION" >> $GITHUB_OUTPUT
             echo "TAG=$VERSION" >> $GITHUB_ENV
+          else
+            echo "TAG=latest" >> $GITHUB_ENV
           fi
 
       - name: Set up QEMU
@@ -41,6 +43,8 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: true
+          build-args: |
+            VERSION=${{ env.TAG }}
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/${{ env.PROJECT }}:latest
             ${{ secrets.DOCKER_USERNAME }}/${{ env.PROJECT }}:${{ env.TAG }}
