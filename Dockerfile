@@ -43,8 +43,24 @@ RUN chmod +x /frp/frpc
 # 创建默认 hosts 条目文件
 RUN echo "8.8.8.8 dns.google" > /frp/default-config/custom-hosts
 
+# 创建配置目录（确保存在）
+RUN mkdir -p /frp/config
+
+# 创建初始化脚本
+RUN echo '#!/bin/sh\n\
+echo "检查配置文件..."\n\
+if [ ! -f /frp/config/frpc.ini ]; then\n\
+    echo "初始化 frpc.ini 配置文件..."\n\
+    cp /frp/default-config/frpc.ini /frp/config/frpc.ini\n\
+else\n\
+    echo "使用现有的 frpc.ini 配置文件"\n\
+fi\n\
+echo "添加自定义 hosts 条目..."\n\
+cat /frp/default-config/custom-hosts >> /etc/hosts\n\
+echo "启动 frpc..."\n\
+exec /frp/frpc -c /frp/config/frpc.ini' > /init.sh && chmod +x /init.sh
+
 # 暴露配置目录用于映射
 VOLUME /frp/config
 
-# 直接复制默认配置（如果不存在）然后启动
-CMD sh -c 'cp -n /frp/default-config/frpc.ini /frp/config/frpc.ini; cat /frp/default-config/custom-hosts >> /etc/hosts; /frp/frpc -c /frp/config/frpc.ini'
+CMD ["/init.sh"]
