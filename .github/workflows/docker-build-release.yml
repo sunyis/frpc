@@ -1,4 +1,4 @@
-name: "docker build release"
+name: "Docker Build and Push"
 
 on:
   push:
@@ -7,44 +7,57 @@ on:
 env:
   PROJECT: frpc
 
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2.3.5
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-      - name: Set tag
-        id: tag
+      - name: Extract Version from Dockerfile
+        id: version
         run: |
-          # 从 Dockerfile 中提取 VERSION
-          VERSION=$(cat Dockerfile | awk '{if($1~"ENV" && $2=="VERSION")print $3}' | head -1 || echo "")
-          echo "Found VERSION: $VERSION"
-          
-          if [[ -n "$VERSION" && "$VERSION" != "latest" ]]; then
-            echo "tag=$VERSION" >> $GITHUB_OUTPUT
-            echo "TAG=$VERSION" >> $GITHUB_ENV
-            echo "HAS_VERSION=true" >> $GITHUB_ENV
+          # 从 Dockerfile 中提取 VERSION 环境变量
+          if grep -q "ENV VERSION" Dockerfile; then
+            VERSION=$(grep "ENV VERSION" Dockerfile | awk '{print $3}' | head -1)
+            echo "Found VERSION in Dockerfile: $VERSION"
+            
+            # 验证版本格式
+            if [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || [[ "$VERSION" =~ ^[0-9]+\.[0-9]+$ ]]; then
+              echo "Valid version format: $VERSION"
+              echo "tag=$VERSION" >> $GITHUB_OUTPUT
+              echo "TAG=$VERSION" >> $GITHUB_ENV
+            else
+              echo "Invalid version format: $VERSION, using latest"
+              echo "TAG=latest" >> $GITHUB_ENV
+            fi
           else
+            echo "No VERSION found in Dockerfile, using latest"
             echo "TAG=latest" >> $GITHUB_ENV
-            echo "HAS_VERSION=false" >> $GITHUB_ENV
           fi
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: |
+            image=moby/buildkit:buildx-stable-1
 
-      - name: Login Docker Hub
-        uses: docker/login-action@v1 
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build and push to docker hub
-        id: build
-        uses: docker/build-push-action@v2
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
         with:
           context: .
           platforms: linux/amd64,linux/arm64,linux/arm/v7
@@ -52,6 +65,20 @@ jobs:
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/${{ env.PROJECT }}:latest
             ${{ secrets.DOCKER_USERNAME }}/${{ env.PROJECT }}:${{ env.TAG }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: false
+
+      - name: Verify Pushed Images
+        run: |
+          echo "Verifying pushed images:"
+          echo "- ${{ secrets.DOCKER_USERNAME }}/${{ env.PROJECT }}:latest"
+          echo "- ${{ secrets.DOCKER_USERNAME }}/${{ env.PROJECT }}:${{ env.TAG }}"
+          
+          # 检查镜像是否成功推送
+          if [[ "${{ env.TAG }}" != "latest" ]]; then
+            echo "Both tags should point to the same image"
+          fi
 
       - name: Sync README.md to Docker Hub
         uses: ms-jpq/sync-dockerhub-readme@v1
@@ -60,3 +87,19 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
           repository: ${{ secrets.DOCKER_USERNAME }}/${{ env.PROJECT }}
           readme: "./README.md"
+
+      - name: Create GitHub Release
+        if: env.TAG != 'latest'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ env.TAG }}
+          name: Release ${{ env.TAG }}
+          body: |
+            Docker image ${{ secrets.DOCKER_USERNAME }}/${{ env.PROJECT }}:${{ env.TAG }}
+            
+            Platform support:
+            - linux/amd64
+            - linux/arm64  
+            - linux/arm/v7
+          draft: false
+          prerelease: false
