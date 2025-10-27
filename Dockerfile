@@ -29,11 +29,19 @@ RUN case "${TARGETARCH}" in \
     && tar xzf frp.tar.gz \
     && cd frp_${VERSION}_linux_${PLATFORM} \
     && mkdir -p /frp \
-    && mv frpc frpc.ini /frp/ \
+    && mv frpc /frp/ \
+    # 创建配置目录并将 frpc.ini 放入其中
+    && mkdir -p /frp/config \
+    && mv frpc.ini /frp/config/frpc.ini \
     && cd / \
     && rm -rf frp_${VERSION}_linux_${PLATFORM} frp.tar.gz \
     && apk del wget
 
-VOLUME /frp
+# 设置可执行权限
+RUN chmod +x /frp/frpc
 
-CMD ["/frp/frpc", "-c", "/frp/frpc.ini"]
+# 暴露配置目录用于映射
+VOLUME /frp/config
+
+# 使用配置目录中的 frpc.ini
+CMD ["/frp/frpc", "-c", "/frp/config/frpc.ini"]
