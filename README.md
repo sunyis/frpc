@@ -15,7 +15,7 @@ docker run -d --name frpc --net=host --restart always --privileged=true -v /home
 ```
 说明
 ```shell
-新添加命令参数--net=host,允许docker网络与本地的端口互通, 不需要添加映射本地端口,安装时如果没有添加时,删除重新拉取即可, 运行后,只需要替换/home/frp/目录中frpc.ini中的内容为你自己的配置信息,然后重启frpc就可以了。
+新添加命令参数--net=host,允许docker网络与本地的端口互通, 不需要添加映射本地端口,安装时如果没有添加,删除后,复制命令重新拉取即可, 运行后,只需要替换/home/frp/目录中frpc.ini中的内容为你自己的配置信息,然后重启frpc就可以了。
 ```
 
 ## 2. 链接
