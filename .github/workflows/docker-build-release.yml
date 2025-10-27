@@ -24,8 +24,10 @@ jobs:
           if [[ -n "$VERSION" && "$VERSION" != "latest" ]]; then
             echo "tag=$VERSION" >> $GITHUB_OUTPUT
             echo "TAG=$VERSION" >> $GITHUB_ENV
+            echo "HAS_VERSION=true" >> $GITHUB_ENV
           else
             echo "TAG=latest" >> $GITHUB_ENV
+            echo "HAS_VERSION=false" >> $GITHUB_ENV
           fi
 
       - name: Set up QEMU
@@ -48,6 +50,7 @@ jobs:
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: true
           tags: |
+            ${{ secrets.DOCKER_USERNAME }}/${{ env.PROJECT }}:latest
             ${{ secrets.DOCKER_USERNAME }}/${{ env.PROJECT }}:${{ env.TAG }}
 
       - name: Sync README.md to Docker Hub
