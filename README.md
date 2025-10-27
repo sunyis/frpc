@@ -6,29 +6,6 @@
 - Docker [stilleshan/frpc](https://hub.docker.com/r/stilleshan/frpc)
 > *docker image support for X86 and ARM*
 
-## 更新
-- **2024-03-03** 更新到新版本,支持 toml 配置文件.
-- **2021-05-31** 更新国内镜像方便使用
-- **2021-05-31** 目前 X86 群晖 DMS 7.0 可直接使用 Linux 版本脚本,已实测.由于没有 ARM 版可尝试,请自行尝试.
-- **2021-05-31** 更新 Linux 一键安装脚本同时支持 X86 和 ARM
-- **2021-05-29** 更新从`0.36.2`版本起 docker 镜像同时支持 X86 和 ARM
-
-## 使用
-以下分为四种部署方法,请根据实际情况自行选择:
-
-1. 群晖 NAS docker 安装 **[支持 docker 的群晖机型首选]**
-2. 群晖 NAS 一键脚本安装 **[不支持 docker 的群晖机型]**
-3. Linux 服务器 一键脚本安装 **[内网 Linux 服务器或虚拟机]**
-4. Linux 服务器 docker 安装 **[内网 Linux 服务器或虚拟机]**
-
----
-
-### 1. 群晖 NAS docker 安装 **[支持 docker 的群晖机型首选]** 
-[详情点击查看教程](https://www.ioiox.com/archives/26.html)
-
-### 2. 群晖 NAS 一键脚本安装 **[不支持 docker 的群晖机型]**
-[详情点击查看教程](https://www.ioiox.com/archives/6.html)
-
 ### 3. Linux 服务器 一键脚本安装
 > *本脚本目前同时支持 Linux X86 和 ARM 架构*
 
@@ -83,10 +60,3 @@ docker restart frpc
 
 ## 链接
 - Blog [www.ioiox.com](https://www.ioiox.com)
-- GitHub [stilleshan/frpc](https://github.com/stilleshan/frpc)
-- Docker Hub [stilleshan/frpc](https://hub.docker.com/r/stilleshan/frpc)
-- Docker [docker.ioiox.com](https://docker.ioiox.com)
-- 原版frp项目 [fatedier/frp](https://github.com/fatedier/frp)
-- [群晖NAS使用Docker安装配置frpc内网穿透教程](https://www.ioiox.com/archives/26.html) 
-- [群晖NAS安装配置免费frp内网穿透教程](https://www.ioiox.com/archives/6.html)
-- [新手入门 - 详解 frp 内网穿透 frpc.toml 配置](https://www.ioiox.com/archives/79.html)
