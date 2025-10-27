@@ -1,4 +1,4 @@
-# frpc 测试阶段,请勿拉取
+# frpc 错误阶段,请勿拉取
 ## 项目简介
 基于 [fatedier/frp](https://github.com/fatedier/frp) 原版 frp 内网穿透客户端 frpc 的一键安装卸载脚本和 docker 镜像.支持群晖NAS,Linux 服务器和 docker 等多种环境安装部署.
 
