@@ -17,8 +17,11 @@ jobs:
       - name: Set tag
         id: tag
         run: |
-          VERSION=$(cat Dockerfile | awk '{if($1~"ENV" && $2=="VERSION")print $3}' || echo "")
-          if [[ -n "$VERSION" ]]; then
+          # 从 Dockerfile 中提取 VERSION
+          VERSION=$(cat Dockerfile | awk '{if($1~"ENV" && $2=="VERSION")print $3}' | head -1 || echo "")
+          echo "Found VERSION: $VERSION"
+          
+          if [[ -n "$VERSION" && "$VERSION" != "latest" ]]; then
             echo "tag=$VERSION" >> $GITHUB_OUTPUT
             echo "TAG=$VERSION" >> $GITHUB_ENV
           else
@@ -38,15 +41,13 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Build and push to docker hub
+        id: build
         uses: docker/build-push-action@v2
         with:
           context: .
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: true
-          build-args: |
-            VERSION=${{ env.TAG }}
           tags: |
-            ${{ secrets.DOCKER_USERNAME }}/${{ env.PROJECT }}:latest
             ${{ secrets.DOCKER_USERNAME }}/${{ env.PROJECT }}:${{ env.TAG }}
 
       - name: Sync README.md to Docker Hub
