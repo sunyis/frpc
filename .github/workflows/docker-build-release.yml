@@ -3,14 +3,10 @@ name: "Docker Build and Push"
 on:
   push:
   workflow_dispatch:
-    inputs:
-      custom_version:
-        description: 'Custom version tag'
-        required: false
-        default: '28.2'
 
 env:
   PROJECT: frpc
+  CUSTOM_VERSION: "28.2"
 
 jobs:
   build:
@@ -20,17 +16,26 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set Custom Version
-        id: version
+      - name: Validate Docker Hub Username
+        id: validate
         run: |
-          # 使用手动输入的版本或默认值
-          if [ -n "${{ github.event.inputs.custom_version }}" ]; then
-            CUSTOM_VERSION="${{ github.event.inputs.custom_version }}"
-          else
-            CUSTOM_VERSION="28.2"
+          # 验证用户名是否有效
+          USERNAME="${{ secrets.DOCKER_USERNAME }}"
+          if [[ -z "$USERNAME" ]]; then
+            echo "❌ DOCKER_USERNAME secret is empty"
+            exit 1
           fi
-          echo "CUSTOM_VERSION=$CUSTOM_VERSION" >> $GITHUB_ENV
-          echo "Using version: $CUSTOM_VERSION"
+          
+          # Docker Hub 用户名验证（小写字母、数字、连字符）
+          if [[ ! "$USERNAME" =~ ^[a-z0-9][a-z0-9_-]*$ ]]; then
+            echo "❌ Invalid Docker Hub username format: $USERNAME"
+            echo "   Username must contain only lowercase letters, numbers, hyphens and underscores"
+            exit 1
+          fi
+          
+          echo "✅ Valid Docker Hub username: $USERNAME"
+          echo "PROJECT_NAME=${{ env.PROJECT }}" >> $GITHUB_ENV
+          echo "IMAGE_VERSION=${{ env.CUSTOM_VERSION }}" >> $GITHUB_ENV
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -50,18 +55,15 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: true
-          tags: |
-            ${{ secrets.DOCKER_USERNAME }}/${{ env.PROJECT }}:latest
-            ${{ secrets.DOCKER_USERNAME }}/${{ env.PROJECT }}:${{ env.CUSTOM_VERSION }}
+          tags: ${{ secrets.DOCKER_USERNAME }}/${{ env.PROJECT }}:${{ env.CUSTOM_VERSION }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           provenance: false
 
-      - name: Verify Pushed Images
+      - name: Verify Pushed Image
         run: |
-          echo "✅ Successfully pushed Docker images:"
-          echo "   - ${{ secrets.DOCKER_USERNAME }}/${{ env.PROJECT }}:latest"
-          echo "   - ${{ secrets.DOCKER_USERNAME }}/${{ env.PROJECT }}:${{ env.CUSTOM_VERSION }}"
+          echo "✅ Successfully pushed Docker image:"
+          echo "   ${{ secrets.DOCKER_USERNAME }}/${{ env.PROJECT }}:${{ env.CUSTOM_VERSION }}"
 
       - name: Sync README.md to Docker Hub
         uses: ms-jpq/sync-dockerhub-readme@v1
