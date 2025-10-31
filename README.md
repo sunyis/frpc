@@ -9,7 +9,7 @@
 ### 1. 服务器
 > *本脚本目前同时支持 Linux AMD 和 ARM 架构*
 
-安装
+Docker命令安装
 ```shell
 docker run -d --name frpc --net=host --restart always --privileged=true -v /home/frp:/frp/config wuzhij/frpc:0.28.2
 ```
