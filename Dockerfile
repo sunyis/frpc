@@ -40,10 +40,6 @@ RUN case "${TARGETARCH}" in \
 # 设置可执行权限
 RUN chmod +x /frp/frpc
 
-# 创建自定义 hosts 条目文件，修改为指定的 DNS
-RUN echo "180.184.1.1" > /frp/default-config/custom-hosts \
-    && echo "180.184.2.2" >> /frp/default-config/custom-hosts
-
 # 创建配置目录（确保存在）
 RUN mkdir -p /frp/config
 
