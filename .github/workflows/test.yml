@@ -1,0 +1,70 @@
+name: Test Build and Compress Tools (Ubuntu 22.04)
+
+on:
+  schedule:
+    # 每周日 UTC 时间 0:00 运行一次 (即北京时间周一早上 8:00)
+    - cron: '0 0 * * 0'
+  workflow_dispatch: # 允许在 GitHub 页面手动点击触发
+
+jobs:
+  test-build-and-compress:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Test Build and Tools in Ubuntu 22.04
+        run: |
+          echo "=== 启动 Ubuntu 22.04 容器进行测试 ==="
+          docker run --rm -e DEBIAN_FRONTEND=noninteractive -v ${{ github.workspace }}:/work -w /work ubuntu:22.04 bash -c "
+            set -e
+            echo '--- 1. 更新系统并安装基础环境 ---'
+            apt-get update
+            # 安装 p7zip-full (提供 7z) 和 rar。注意：rar 在 Ubuntu 22.04 amd64 源中可用
+            apt-get install -y python3 python3-pip python3-venv zip tar p7zip-full rar unrar curl build-essential libffi-dev libssl-dev
+            
+            echo '--- 2. 验证 7z 命令 ---'
+            7z | head -n 2 || true
+            if ! command -v 7z &> /dev/null; then echo '❌ 7z 安装失败'; exit 1; fi
+            echo '✅ 7z 命令正常'
+            
+            echo '--- 3. 验证 rar 命令 ---'
+            rar | head -n 2 || true
+            if ! command -v rar &> /dev/null; then echo '❌ rar 安装失败'; exit 1; fi
+            echo '✅ rar 命令正常'
+
+            echo '--- 4. 测试 7z 压缩与解压 ---'
+            echo 'hello 7z' > test7z.txt
+            7z a test.7z test7z.txt
+            7z x test.7z -oextracted_7z
+            if [ -f extracted_7z/test7z.txt ]; then echo '✅ 7z 压缩解压测试成功'; else echo '❌ 7z 测试失败'; exit 1; fi
+
+            echo '--- 5. 测试 rar 压缩与解压 ---'
+            echo 'hello rar' > testrar.txt
+            rar a test.rar testrar.txt
+            unrar x test.rar extracted_rar
+            if [ -f extracted_rar/testrar.txt ]; then echo '✅ rar 压缩解压测试成功'; else echo '❌ rar 测试失败'; exit 1; fi
+
+            echo '--- 6. 测试 Python 环境与 PyInstaller 打包 ---'
+            python3 -m venv venv
+            source venv/bin/activate
+            pip3 install --upgrade pip
+            pip3 install --prefer-binary -r requirements.txt
+            pip3 install --prefer-binary paramiko pyinstaller
+            
+            # 使用与正式打包完全一致的命令
+            pyinstaller --onefile --add-data 'web:web' --add-data 'core:core' --add-data 'config.json:.' main.py
+            
+            if [ -f dist/main ]; then
+                echo '✅ PyInstaller 二进制打包成功'
+                ls -lh dist/main
+            else
+                echo '❌ PyInstaller 打包失败'
+                exit 1
+            fi
+            
+            echo '================================'
+            echo '  ✅ 所有测试通过！'
+            echo '  Ubuntu 22.04 环境及压缩工具正常。'
+            echo '================================'
+          "
