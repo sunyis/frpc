@@ -36,13 +36,17 @@ jobs:
             echo '--- 4. 测试 7z 压缩与解压 ---'
             echo 'hello 7z' > test7z.txt
             7z a test.7z test7z.txt
+            # 创建目标目录并解压
+            mkdir -p extracted_7z
             7z x test.7z -oextracted_7z
             if [ -f extracted_7z/test7z.txt ]; then echo '✅ 7z 压缩解压测试成功'; else echo '❌ 7z 测试失败'; exit 1; fi
 
             echo '--- 5. 测试 rar 压缩与解压 ---'
             echo 'hello rar' > testrar.txt
             rar a test.rar testrar.txt
-            unrar x test.rar extracted_rar
+            # 【关键修复】创建目标目录，且 unrar 的目标目录末尾必须加 / 
+            mkdir -p extracted_rar
+            unrar x test.rar extracted_rar/
             if [ -f extracted_rar/testrar.txt ]; then echo '✅ rar 压缩解压测试成功'; else echo '❌ rar 测试失败'; exit 1; fi
 
             echo '--- 6. 测试 Python 环境与 PyInstaller 打包 ---'
