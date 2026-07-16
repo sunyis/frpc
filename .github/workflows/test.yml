@@ -8,67 +8,74 @@ on:
 
 jobs:
   test-build-and-compress:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04 # 直接使用 GitHub 提供的 Ubuntu 22.04 运行器
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Test Build and Tools in Ubuntu 22.04
+      - name: 1. Install Base Environment and Compress Tools
         run: |
-          echo "=== 启动 Ubuntu 22.04 容器进行测试 ==="
-          docker run --rm -e DEBIAN_FRONTEND=noninteractive -v ${{ github.workspace }}:/work -w /work ubuntu:22.04 bash -c "
-            set -e
-            echo '--- 1. 更新系统并安装基础环境 ---'
-            apt-get update
-            # 安装 p7zip-full (提供 7z) 和 rar。注意：rar 在 Ubuntu 22.04 amd64 源中可用
-            apt-get install -y python3 python3-pip python3-venv zip tar p7zip-full rar unrar curl build-essential libffi-dev libssl-dev
-            
-            echo '--- 2. 验证 7z 命令 ---'
-            7z | head -n 2 || true
-            if ! command -v 7z &> /dev/null; then echo '❌ 7z 安装失败'; exit 1; fi
-            echo '✅ 7z 命令正常'
-            
-            echo '--- 3. 验证 rar 命令 ---'
-            rar | head -n 2 || true
-            if ! command -v rar &> /dev/null; then echo '❌ rar 安装失败'; exit 1; fi
-            echo '✅ rar 命令正常'
+          set -e
+          sudo apt-get update
+          # 安装 p7zip-full (提供 7z), rar, unrar 及编译依赖
+          sudo apt-get install -y zip tar p7zip-full rar unrar curl build-essential libffi-dev libssl-dev
 
-            echo '--- 4. 测试 7z 压缩与解压 ---'
-            echo 'hello 7z' > test7z.txt
-            7z a test.7z test7z.txt
-            # 创建目标目录并解压
-            mkdir -p extracted_7z
-            7z x test.7z -oextracted_7z
-            if [ -f extracted_7z/test7z.txt ]; then echo '✅ 7z 压缩解压测试成功'; else echo '❌ 7z 测试失败'; exit 1; fi
+      - name: 2. Verify 7z Command
+        run: |
+          7z | head -n 2 || true
+          if ! command -v 7z &> /dev/null; then echo '❌ 7z 安装失败'; exit 1; fi
+          echo '✅ 7z 命令正常'
 
-            echo '--- 5. 测试 rar 压缩与解压 ---'
-            echo 'hello rar' > testrar.txt
-            rar a test.rar testrar.txt
-            # 【关键修复】创建目标目录，且 unrar 的目标目录末尾必须加 / 
-            mkdir -p extracted_rar
-            unrar x test.rar extracted_rar/
-            if [ -f extracted_rar/testrar.txt ]; then echo '✅ rar 压缩解压测试成功'; else echo '❌ rar 测试失败'; exit 1; fi
+      - name: 3. Verify rar Command
+        run: |
+          rar | head -n 2 || true
+          if ! command -v rar &> /dev/null; then echo '❌ rar 安装失败'; exit 1; fi
+          echo '✅ rar 命令正常'
 
-            echo '--- 6. 测试 Python 环境与 PyInstaller 打包 ---'
-            python3 -m venv venv
-            source venv/bin/activate
-            pip3 install --upgrade pip
-            pip3 install --prefer-binary -r requirements.txt
-            pip3 install --prefer-binary paramiko pyinstaller
-            
-            # 使用与正式打包完全一致的命令
-            pyinstaller --onefile --add-data 'web:web' --add-data 'core:core' --add-data 'config.json:.' main.py
-            
-            if [ -f dist/main ]; then
-                echo '✅ PyInstaller 二进制打包成功'
-                ls -lh dist/main
-            else
-                echo '❌ PyInstaller 打包失败'
-                exit 1
-            fi
-            
-            echo '================================'
-            echo '  ✅ 所有测试通过！'
-            echo '  Ubuntu 22.04 环境及压缩工具正常。'
-            echo '================================'
-          "
+      - name: 4. Test 7z Compress and Extract
+        run: |
+          echo 'hello 7z' > test7z.txt
+          7z a test.7z test7z.txt
+          mkdir -p extracted_7z
+          7z x test.7z -oextracted_7z
+          if [ -f extracted_7z/test7z.txt ]; then echo '✅ 7z 压缩解压测试成功'; else echo '❌ 7z 测试失败'; exit 1; fi
+
+      - name: 5. Test rar Compress and Extract
+        run: |
+          echo 'hello rar' > testrar.txt
+          rar a test.rar testrar.txt
+          mkdir -p extracted_rar
+          unrar x test.rar extracted_rar/
+          if [ -f extracted_rar/testrar.txt ]; then echo '✅ rar 压缩解压测试成功'; else echo '❌ rar 测试失败'; exit 1; fi
+
+      - name: 6. Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: 7. Test PyInstaller Build
+        run: |
+          set -e
+          # 检查项目必要文件是否存在
+          if [ ! -f requirements.txt ]; then echo "❌ 找不到 requirements.txt，请确保工作流在项目根目录运行"; exit 1; fi
+          if [ ! -f main.py ]; then echo "❌ 找不到 main.py"; exit 1; fi
+
+          python -m pip install --upgrade pip
+          pip install --prefer-binary -r requirements.txt
+          pip install --prefer-binary paramiko pyinstaller
+          
+          # 使用与正式打包完全一致的命令
+          pyinstaller --onefile --add-data 'web:web' --add-data 'core:core' --add-data 'config.json:.' main.py
+          
+          if [ -f dist/main ]; then
+              echo '✅ PyInstaller 二进制打包成功'
+              ls -lh dist/main
+          else
+              echo '❌ PyInstaller 打包失败'
+              exit 1
+          fi
+          
+          echo '================================'
+          echo '  ✅ 所有测试通过！'
+          echo '  Ubuntu 22.04 环境及压缩工具正常。'
+          echo '================================'
